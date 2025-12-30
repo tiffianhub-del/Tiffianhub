@@ -10,13 +10,21 @@ export default function Dashboard() {
   const [user, setUser] = useState(null); // Added for user info
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [token, setToken] = useState(null);
+
+  // Get token from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setToken(localStorage.getItem('token'));
+    }
+  }, []);
 
   // Fetch user & listings from backend
   useEffect(() => {
     const fetchDashboardData = async () => {
+      if (!token) return;
+      
       try {
-        const token = localStorage.getItem('token'); 
-        if (!token) return;
 
         // Fetch user
         const userRes = await fetch('http://localhost:5000/api/auth/me', {
@@ -38,7 +46,7 @@ export default function Dashboard() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [token]);
 
   const handleAddListing = () => router.push('/list'); // Navigate to add-listing page
 
@@ -51,8 +59,9 @@ export default function Dashboard() {
 
   // Actions
   const toggleStatus = async (id, currentStatus) => {
+    if (!token) return;
+    
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`http://localhost:5000/api/listings/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -69,8 +78,9 @@ export default function Dashboard() {
   };
 
   const handleDelete = async (id) => {
+    if (!token) return;
+    
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`http://localhost:5000/api/listings/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },

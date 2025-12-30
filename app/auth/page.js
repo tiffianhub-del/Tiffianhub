@@ -30,7 +30,9 @@ export default function AuthPage() {
       }
 
       // Save token
-      localStorage.setItem('token', data.token);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', data.token);
+      }
 
       // Redirect
       window.location.href = '/dashboard';
@@ -63,7 +65,9 @@ export default function AuthPage() {
       }
 
       // Save token
-      localStorage.setItem('token', data.token);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', data.token);
+      }
 
       // Redirect
       window.location.href = '/dashboard';

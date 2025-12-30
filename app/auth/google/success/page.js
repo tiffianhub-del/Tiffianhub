@@ -7,6 +7,8 @@ export default function GoogleSuccessPage() {
   const router = useRouter();
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     // Get token from URL query string
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");

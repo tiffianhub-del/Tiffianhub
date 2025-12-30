@@ -6,6 +6,14 @@ export default function ListPage() {
   const [mounted, setMounted] = useState(false);
   const [theme, setTheme] = useState("light");
   const [images, setImages] = useState([]);
+  const [token, setToken] = useState(null);
+
+  // Get token from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setToken(localStorage.getItem('token'));
+    }
+  }, []);
 
   // Toggle theme
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
@@ -59,7 +67,6 @@ const handleFiles = (files) => {
     };
 
     try {
-      const token = localStorage.getItem("token");
       if (!token) {
         toast.error("❌ You must be logged in to submit a listing.");
         return;
