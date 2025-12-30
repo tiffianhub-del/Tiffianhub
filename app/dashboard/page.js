@@ -27,7 +27,7 @@ export default function Dashboard() {
       try {
 
         // Fetch user
-        const userRes = await fetch('http://localhost:5000/api/auth/me', {
+        const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!userRes.ok) throw new Error('Failed to fetch user');
@@ -35,7 +35,7 @@ export default function Dashboard() {
         setUser(userData.user);
 
         // Fetch listings
-        const res = await fetch('http://localhost:5000/api/listings/my', {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/listings/my`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -62,7 +62,7 @@ export default function Dashboard() {
     if (!token) return;
     
     try {
-      const res = await fetch(`http://localhost:5000/api/listings/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/listings/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: currentStatus === 'active' ? 'inactive' : 'active' }),
@@ -81,7 +81,7 @@ export default function Dashboard() {
     if (!token) return;
     
     try {
-      const res = await fetch(`http://localhost:5000/api/listings/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/listings/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
