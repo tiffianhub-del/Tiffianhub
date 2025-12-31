@@ -334,7 +334,7 @@ const Toast = ({ message, type, visible }) => {
     setMounted(true);
 const fetchListings = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/listings`);
+      const res = await fetch('http://localhost:5000/api/listings');
       if (!res.ok) throw new Error('Failed to fetch listings');
       let data = await res.json();
 

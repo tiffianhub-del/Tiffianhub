@@ -14,7 +14,7 @@ export default function AuthPage() {
     setError('');
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signin`, {
+      const res = await fetch('http://localhost:5000/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -47,7 +47,7 @@ export default function AuthPage() {
     setError('');
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup`, {
+      const res = await fetch('http://localhost:5000/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -149,7 +149,7 @@ export default function AuthPage() {
 
             {/* Google Sign-In Button */}
             <div style={{ textAlign: 'center', marginTop: 16 }}>
-<a href={`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`}>
+<a href="http://localhost:5000/api/auth/google">
   <button type="button" className="btn-google-full">
     <img
       src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg"
@@ -207,7 +207,7 @@ export default function AuthPage() {
             <div className="space"></div>
 
             <button className="btn btn-primary" type="submit">Create account</button>
-             <a href={`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`}>
+             <a href="http://localhost:5000/api/auth/google">
   <button type="button" className="btn-google-full">
     <img
       src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg"

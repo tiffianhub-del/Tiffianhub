@@ -15,12 +15,7 @@ const app = express();
 app.use(passport.initialize());
 
 // Middleware
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://yourdomain.com' 
-    : 'http://localhost:3000',
-  credentials: true
-}));
+app.use(cors()); // or cors({ origin: 'http://localhost:3000' })
 app.use(express.json({ limit: '50mb' })); // allow large Base64 payloads
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -33,10 +28,7 @@ app.use('/api/contact', contactRoutes);
 console.log('MONGO_URI present?', Boolean(process.env.MONGO_URI));
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1); // Exit if can't connect to DB
-  });
+  .catch(err => console.error('MongoDB connection error:', err));
 
 // Start server
 const PORT = process.env.PORT || 5000;

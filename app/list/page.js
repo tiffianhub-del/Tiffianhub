@@ -72,7 +72,7 @@ const handleFiles = (files) => {
         return;
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/listings`, {
+      const res = await fetch("http://localhost:5000/api/listings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
