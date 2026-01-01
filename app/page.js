@@ -281,8 +281,7 @@ export default function Home() {
   const [selectedDays, setSelectedDays] = useState([]); 
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [selectedCuisine, setSelectedCuisine] = useState(null); // ✅ new
-  const [mounted, setMounted] = useState(false);
-  const [theme, setTheme] = useState('light'); 
+  const [mounted, setMounted] = useState(false); 
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -332,9 +331,12 @@ const Toast = ({ message, type, visible }) => {
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== 'undefined') {
+      document.body.className = 'dark';
+    }
 const fetchListings = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/listings');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/listings`);
       if (!res.ok) throw new Error('Failed to fetch listings');
       let data = await res.json();
 
@@ -355,12 +357,6 @@ const fetchListings = async () => {
 
   fetchListings();
 }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      document.body.className = theme;
-    }
-  }, [theme]);
 
   const expandDays = (days) => {
     return days.flatMap(day => {
@@ -431,10 +427,6 @@ useEffect(() => {
     setSelectedDays(prev =>
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
     );
-  };
-
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   if (!mounted) return null;
@@ -528,17 +520,23 @@ const handleRatingSubmit = (listingId, newRating) => {
         <div className="container nav__inner">
           <a className="brand" href="#">
             <span className="brand__icon">🍽️</span>
-            <span className="brand__name">TiffinHub</span>
+            <span className="brand__name">FreshillyMeal</span>
           </a>
           <nav className="nav__links">
-            <button className="btn btn--dark" onClick={toggleTheme}>
-              {theme === 'dark' ? '☀️ ' : '🌙 '}
-            </button>
-            
-            <a href="#" className="nav__link">Browse Tiffins</a>
-            <a href="#" className="nav__link">My Orders</a>
+            <a 
+              href="#listings" 
+              className="nav__link"
+              onClick={(e) => {
+                e.preventDefault();
+                const listingsSection = document.getElementById('listings');
+                if (listingsSection) {
+                  listingsSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+            >
+              Browse Tiffins
+            </a>
             <a href="#" className="nav__link">Help</a>
-            <button className="icon-btn" aria-label="Notifications">🔔</button>
             <button className="icon-btn avatar" aria-label="User menu">👤</button>
             <Link href="/auth" className="btn btn--dark">Register as Provider</Link>
           </nav>
@@ -548,13 +546,20 @@ const handleRatingSubmit = (listingId, newRating) => {
       {/* HERO */}
       <section className="hero">
         <div className="container">
-          <h1 className="hero__title">Find homemade tiffin services near you</h1>
+          <h1 className="hero__title">
+            Find homemade tiffin services <span className="hero__title--pink">near you</span>
+          </h1>
           <p className="hero__subtitle">
             Discover delicious, home-cooked meals delivered right to your doorstep from local tiffin providers
           </p>
           <form className="searchbar" onSubmit={(e) => e.preventDefault()}>
             <input type="text" placeholder="Enter your location" aria-label="Location" />
-            <button className="icon-btn" aria-label="Locate">🔍</button>
+            <button className="icon-btn search-icon-btn" aria-label="Locate">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="m20 20-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
             <button className="btn btn--primary">Find Tiffins</button>
           </form>
         </div>
@@ -651,7 +656,7 @@ const handleRatingSubmit = (listingId, newRating) => {
 
       {/* CARD GRID */}
 
-   <section className="container card-grid">
+   <section id="listings" className="container card-grid">
         {loading && <p>Loading listings...</p>}
         {error && <p style={{ color: "red" }}>⚠️ {error}</p>}
         {!loading && !error && sortedListings.length === 0 && <p>No listings available.</p>}
@@ -772,14 +777,8 @@ const handleRatingSubmit = (listingId, newRating) => {
       <footer className="footer">
         <div className="container footer__grid">
           <div>
-            <h4 className="footer__title">TiffinHub</h4>
+            <h4 className="footer__title">FreshillyMeal</h4>
             <p className="muted">Connecting hungry customers with local tiffin service providers since 2025.</p>
-            <div className="socials">
-              <a href="#" aria-label="Facebook">f</a>
-              <a href="#" aria-label="Twitter">t</a>
-              <a href="#" aria-label="Instagram">i</a>
-              <a href="#" aria-label="LinkedIn">in</a>
-            </div>
           </div>
           <div>
             <h5 className="footer__subtitle">Quick Links</h5>
@@ -804,13 +803,11 @@ const handleRatingSubmit = (listingId, newRating) => {
           <div>
             <h5 className="footer__subtitle">Contact Us</h5>
             <ul className="contactlist">
-              <li>support@tiffinhub.com</li>
-              <li>+91 98765 43210</li>
-              <li>123 Food Street, Bangalore</li>
+              <li style={{ color: '#4a5568' }}>tiffianhub@gmail.com</li>
             </ul>
           </div>
         </div>
-        <div className="container footer__bar">© 2025 TiffinHub. All rights reserved.</div>
+        <div className="container footer__bar">© 2025 FreshillyMeal. All rights reserved.</div>
       </footer>
 {/* Replace previous modal code / AnimatePresence block with this: */}
 <Modal

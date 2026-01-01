@@ -1,8 +1,13 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import '../../styles/styles.css';
 
 export default function AuthPage() {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      document.body.className = 'dark';
+    }
+  }, []);
   const [tab, setTab] = useState('signin');
   const [signInData, setSignInData] = useState({ email: '', password: '', remember: false });
   const [signUpData, setSignUpData] = useState({ name: '', email: '', password: '' });
@@ -14,7 +19,7 @@ export default function AuthPage() {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/signin', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -47,7 +52,7 @@ export default function AuthPage() {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/signup', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -80,7 +85,7 @@ export default function AuthPage() {
     <main className="center-stack">
       <div className="brand">
         <div className="logo">🍴</div>
-        <div>TiffinHub</div>
+        <div>FreshillyMeal</div>
       </div>
 
       <section className="card auth-card">
@@ -149,7 +154,7 @@ export default function AuthPage() {
 
             {/* Google Sign-In Button */}
             <div style={{ textAlign: 'center', marginTop: 16 }}>
-<a href="http://localhost:5000/api/auth/google">
+<a href={`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`}>
   <button type="button" className="btn-google-full">
     <img
       src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg"
@@ -207,7 +212,7 @@ export default function AuthPage() {
             <div className="space"></div>
 
             <button className="btn btn-primary" type="submit">Create account</button>
-             <a href="http://localhost:5000/api/auth/google">
+             <a href={`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`}>
   <button type="button" className="btn-google-full">
     <img
       src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg"

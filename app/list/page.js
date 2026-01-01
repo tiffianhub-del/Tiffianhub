@@ -1,10 +1,10 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
 
 export default function ListPage() {
   const [mounted, setMounted] = useState(false);
-  const [theme, setTheme] = useState("light");
   const [images, setImages] = useState([]);
   const [token, setToken] = useState(null);
 
@@ -15,18 +15,11 @@ export default function ListPage() {
     }
   }, []);
 
-  // Toggle theme
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
-
-  // Mount effect
+  // Mount effect - set dark mode
   useEffect(() => {
     setMounted(true);
-    document.body.className = theme;
+    document.body.className = "dark";
   }, []);
-
-  useEffect(() => {
-    document.body.className = theme;
-  }, [theme]);
 
   // Convert files to Base64
 const handleFiles = (files) => {
@@ -72,7 +65,7 @@ const handleFiles = (files) => {
         return;
       }
 
-      const res = await fetch("http://localhost:5000/api/listings", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/listings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -97,16 +90,13 @@ const handleFiles = (files) => {
   if (!mounted) return null;
 
   return (
-    <div className={theme}>
+    <div>
       {/* NAVBAR */}
       <header className="nav">
         <div className="container nav__inner">
           <a className="brand" href="/"><span className="brand__name">HomeMade</span></a>
           <nav className="nav__links">
-            <button className="btn btn--dark" onClick={toggleTheme}>
-              {theme === "dark" ? "☀️ " : "🌙 "}
-            </button>
-            <a href="#" className="nav__link">Browse Services</a>
+            <Link href="/" className="nav__link">Browse Services</Link>
             <a href="#" className="nav__link">My Orders</a>
             <a href="#" className="nav__link">Help</a>
             <button className="icon-btn" aria-label="Notifications">🔔</button>

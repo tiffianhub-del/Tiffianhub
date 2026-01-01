@@ -9,6 +9,9 @@ export default function GoogleSuccessPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
+    // Set dark mode
+    document.body.className = "dark";
+    
     // Get token from URL query string
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
@@ -26,9 +29,19 @@ export default function GoogleSuccessPage() {
   }, [router]);
 
   return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h1>Logging you in...</h1>
-      <p>Please wait a moment.</p>
+    <div style={{ 
+      textAlign: "center", 
+      marginTop: "50px",
+      color: "#f9fafb",
+      background: "#0b0d10",
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center"
+    }}>
+      <h1 style={{ color: "#f9fafb", marginBottom: "1rem" }}>Logging you in...</h1>
+      <p style={{ color: "#a5b4fc" }}>Please wait a moment.</p>
     </div>
   );
 }

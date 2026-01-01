@@ -11,7 +11,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
     });
 
     await transporter.sendMail({
-      from: `"TiffinHub" <${process.env.EMAIL_USER}>`,
+      from: `"FreshillyMeal" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       text,

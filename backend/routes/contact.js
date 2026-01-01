@@ -43,6 +43,7 @@ const router = express.Router();
 const nodemailer = require('nodemailer');
 const Listing = require('../models/Listing'); // Listing model
 const User = require('../models/User');       // User model
+const Notification = require('../models/Notification'); // Notification model
 
 // POST /api/contact/:id
 router.post('/:id', async (req, res) => {
@@ -58,6 +59,7 @@ router.post('/:id', async (req, res) => {
     }
 
     const providerEmail = listing.user.email;
+    const providerId = listing.user._id;
 
     // Set up nodemailer transporter
     const transporter = nodemailer.createTransport({
@@ -77,6 +79,16 @@ router.post('/:id', async (req, res) => {
       to: providerEmail,            // provider's email
       subject: `New message about your listing: ${listing.title}`,
       text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
+    });
+
+    // Create notification for provider
+    await Notification.create({
+      provider: providerId,
+      listing: id,
+      fromName: name,
+      fromEmail: email,
+      message: message,
+      read: false,
     });
 
     res.json({ success: true, message: 'Message sent successfully!' });
