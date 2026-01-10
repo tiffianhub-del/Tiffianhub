@@ -3,6 +3,12 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
+// Debug environment variables at startup
+console.log('🔍 Environment Check at Startup:');
+console.log('  NODE_ENV:', process.env.NODE_ENV);
+console.log('  FRONTEND_URL:', process.env.FRONTEND_URL || 'NOT SET ❌');
+console.log('  GOOGLE_CALLBACK_URL:', process.env.GOOGLE_CALLBACK_URL || 'NOT SET ❌');
+
 const passport = require('passport');
 
 // Import routes

@@ -17,12 +17,24 @@ const generateToken = (id) => {
   });
 };
 
+// Validate Google OAuth configuration
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+  console.warn('⚠️  WARNING: Google OAuth credentials not set. Google login will not work.');
+  console.warn('   Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.');
+}
+
+if (!process.env.GOOGLE_CALLBACK_URL) {
+  console.warn('⚠️  WARNING: GOOGLE_CALLBACK_URL not set. Using default.');
+  console.warn('   For local dev: http://localhost:5000/api/auth/google/callback');
+  console.warn('   For Render: https://your-backend.onrender.com/api/auth/google/callback');
+}
+
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback',
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -322,8 +334,30 @@ router.get(
       expiresIn: '30d',
     });
 
-    // Redirect to frontend with token
-    res.redirect(`http://localhost:3000/auth/google/success?token=${token}`);
+    // Debug: Log environment variables
+    console.log('🔍 Debugging OAuth Redirect:');
+    console.log('  FRONTEND_URL:', process.env.FRONTEND_URL);
+    console.log('  NODE_ENV:', process.env.NODE_ENV);
+    
+    // Get frontend URL - be more explicit about production
+    let frontendUrl;
+    if (process.env.FRONTEND_URL) {
+      frontendUrl = process.env.FRONTEND_URL.trim(); // Remove any whitespace
+    } else if (process.env.NODE_ENV === 'production') {
+      // If in production and FRONTEND_URL is not set, this is an error
+      console.error('❌ ERROR: FRONTEND_URL not set in production!');
+      console.error('   This will cause redirect to localhost.');
+      frontendUrl = 'https://tiffianhub-frontend.onrender.com'; // Fallback to your known URL
+    } else {
+      frontendUrl = 'http://localhost:3000'; // Development only
+    }
+    
+    console.log('  Using frontendUrl:', frontendUrl);
+    
+    const redirectUrl = `${frontendUrl}/auth/google/success?token=${token}`;
+    console.log('  Redirecting to:', redirectUrl);
+    
+    res.redirect(redirectUrl);
   }
 );
 
