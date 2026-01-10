@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
+export const dynamic = 'force-dynamic';
+
 export default function ListPage() {
   const [mounted, setMounted] = useState(false);
   const [images, setImages] = useState([]);

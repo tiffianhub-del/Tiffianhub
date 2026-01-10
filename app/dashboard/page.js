@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import '../../styles/styles.css';
 
+export const dynamic = 'force-dynamic';
+
 export default function Dashboard() {
   const router = useRouter();
   const [listings, setListings] = useState([]);
