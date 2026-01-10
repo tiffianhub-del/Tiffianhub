@@ -26,9 +26,15 @@ const listingSchema = new mongoose.Schema({
   method: String,
   cuisine: String,
   offdays: String,
+  location: String,
   images: { type: [String], default: [] }, // Base64 strings
   status: { type: String, default: 'active' },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  ratings: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    rating: { type: Number, required: true, min: 0, max: 5 },
+    createdAt: { type: Date, default: Date.now }
+  }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Listing', listingSchema);

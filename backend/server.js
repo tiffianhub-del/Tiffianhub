@@ -17,9 +17,9 @@ app.use(passport.initialize());
 
 // Middleware
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
+  origin: process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' 
     ? 'https://yourdomain.com' 
-    : 'http://localhost:3000',
+    : 'http://localhost:3000'),
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' })); // allow large Base64 payloads

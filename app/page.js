@@ -230,12 +230,13 @@ function Carousel({ images }) {
   }
 
   return (
-    <div className="relative w-full h-[180px] rounded-lg overflow-hidden">
+    <div className="relative w-full h-[180px] rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
       {/* Active Image */}
       <img
         src={images[current]}
         alt={`Slide ${current + 1}`}
-        className="w-full h-full object-cover transition-all duration-700"
+        className="w-full h-full object-contain transition-all duration-700"
+        style={{ maxWidth: '100%', maxHeight: '100%' }}
       />
 
       {/* Dots */}
@@ -273,6 +274,135 @@ function StarRating({ rating }) {
   );
 }
 
+// DropdownMenu component using portals to escape stacking contexts
+function DropdownMenu({ isOpen, onClose, buttonRef, children, align = 'left', menuId }) {
+  const [position, setPosition] = React.useState({ top: 0, left: 0, width: 200, right: 0 });
+  const [isPositioned, setIsPositioned] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isOpen || !buttonRef?.current || typeof window === 'undefined') {
+      setIsPositioned(false);
+      return;
+    }
+
+    const updatePosition = () => {
+      if (!buttonRef.current) return;
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: Math.max(rect.width, 200),
+        right: window.innerWidth - rect.right
+      });
+      setIsPositioned(true);
+    };
+
+    // Small delay to ensure button is rendered
+    const timeoutId = setTimeout(() => {
+      updatePosition();
+    }, 10);
+
+    const handleScroll = () => updatePosition();
+    const handleResize = () => updatePosition();
+
+    // Use capture phase to catch scroll events in all containers
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleResize);
+      setIsPositioned(false);
+    };
+  }, [isOpen, buttonRef, align]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e) => {
+      // Don't close if clicking the button or inside the menu
+      if (buttonRef?.current?.contains(e.target)) {
+        return;
+      }
+      
+      // Don't close if clicking inside this specific menu
+      const menu = document.querySelector(`[data-dropdown-menu="${menuId}"]`);
+      if (menu && menu.contains(e.target)) {
+        return;
+      }
+      
+      // Close if clicking outside both button and menu
+      onClose();
+    };
+
+    // Use setTimeout to avoid immediate close on button click
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside, true);
+    }, 150);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside, true);
+    };
+  }, [isOpen, onClose, buttonRef]);
+
+  if (!isOpen || typeof window === 'undefined') return null;
+
+  // Don't render if button ref is not available
+  if (!buttonRef?.current) return null;
+  
+  // If position not calculated yet, use a default position
+  if (!isPositioned) {
+    const rect = buttonRef.current.getBoundingClientRect();
+    const defaultStyle = {
+      position: 'fixed',
+      top: `${rect.bottom + 4}px`,
+      left: align === 'right' ? 'auto' : `${rect.left}px`,
+      right: align === 'right' ? `${window.innerWidth - rect.right}px` : 'auto',
+      minWidth: `${Math.max(rect.width, 200)}px`,
+      zIndex: 10000,
+      display: 'block', // Override CSS display:none since we're using portal
+    };
+    
+    return createPortal(
+      <div 
+        style={defaultStyle} 
+        onClick={(e) => e.stopPropagation()} 
+        onMouseDown={(e) => e.stopPropagation()}
+        data-dropdown-menu={menuId}
+        className="dropdown__menu"
+      >
+        {children}
+      </div>,
+      document.body
+    );
+  }
+
+  const menuStyle = {
+    position: 'fixed',
+    top: `${position.top}px`,
+    left: align === 'right' ? 'auto' : `${position.left}px`,
+    right: align === 'right' ? `${position.right}px` : 'auto',
+    minWidth: `${position.width}px`,
+    zIndex: 10000,
+    display: 'block', // Override CSS display:none since we're using portal
+  };
+
+  return createPortal(
+    <div 
+      style={menuStyle} 
+      onClick={(e) => e.stopPropagation()} 
+      onMouseDown={(e) => e.stopPropagation()}
+      data-dropdown-menu={menuId}
+      className="dropdown__menu"
+    >
+      {children}
+    </div>,
+    document.body
+  );
+}
+
 
 
 export default function Home() {
@@ -298,6 +428,29 @@ export default function Home() {
   const [selectedRatingProvider, setSelectedRatingProvider] = useState(null);
   const [rating, setRating] = useState(0);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [searchLocation, setSearchLocation] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (mobileMenuOpen && !event.target.closest('.nav__inner')) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    if (mobileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [mobileMenuOpen]);
+
+  // Refs for dropdown buttons
+  const cuisineButtonRef = React.useRef(null);
+  const deliveryButtonRef = React.useRef(null);
+  const priceButtonRef = React.useRef(null);
+  const availabilityButtonRef = React.useRef(null);
+  const sortButtonRef = React.useRef(null);
 
 
 
@@ -340,11 +493,11 @@ const fetchListings = async () => {
       if (!res.ok) throw new Error('Failed to fetch listings');
       let data = await res.json();
 
-      // Assign a random default rating if not present
+      // Use ratings from backend (averageRating and ratingCount)
       data.listings = data.listings.map(listing => ({
         ...listing,
-        rating: listing.rating || (Math.random() * 2.9 + 2).toFixed(1), // 2.0 - 3.9
-        reviews: listing.reviews || Math.floor(Math.random() * 500 + 50) // optional realistic reviews count
+        rating: listing.averageRating ? parseFloat(listing.averageRating) : null,
+        reviews: listing.ratingCount || 0
       }));
 
       setListings(data.listings);
@@ -367,6 +520,13 @@ const fetchListings = async () => {
 
   // ✅ Filtering listings
   const filteredListings = listings.filter(item => {
+    // Location filter
+    if (searchLocation) {
+      if (!item.location || !item.location.toLowerCase().includes(searchLocation.toLowerCase())) {
+        return false;
+      }
+    }
+
     // Price filter
     if (selectedPrice !== "any") {
       if (selectedPrice === "100-130" && !(item.price >= 100 && item.price <= 130)) return false;
@@ -401,7 +561,12 @@ const fetchListings = async () => {
   const sortedListings = [...filteredListings].sort((a, b) => {
     if (selectedSort === "priceLow") return a.price - b.price;
     if (selectedSort === "priceHigh") return b.price - a.price;
-    if (selectedSort === "popularity") return (b.rating || 0) - (a.rating || 0);
+    if (selectedSort === "popularity") {
+      // Sort by rating, with null ratings at the end
+      const aRating = a.rating !== null && a.rating !== undefined ? a.rating : -1;
+      const bRating = b.rating !== null && b.rating !== undefined ? b.rating : -1;
+      return bRating - aRating;
+    }
     return 0;
   });
 
@@ -421,6 +586,10 @@ useEffect(() => {
 
   const toggleDropdown = (name) => {
     setOpenDropdown(openDropdown === name ? null : name);
+  };
+
+  const closeDropdown = () => {
+    setOpenDropdown(null);
   };
 
   const toggleDay = (day) => {
@@ -500,15 +669,54 @@ const handleSubmit = async (e) => {
   </div>
 )}
 
-const handleRatingSubmit = (listingId, newRating) => {
-  // Update listings state
-  setListings(prevListings =>
-    prevListings.map(item =>
-      item._id === listingId
-        ? { ...item, rating: newRating, reviews: (item.reviews || 0) + 1 }
-        : item
-    )
-  );
+const handleRatingSubmit = async (listingId, newRating) => {
+  try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      setToast({ message: 'You must be logged in to submit a rating', type: 'error', visible: true });
+      setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
+      return;
+    }
+
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/listings/${listingId}/rating`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ rating: newRating }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to submit rating');
+    }
+
+    // Update listings state with new rating data
+    setListings(prevListings =>
+      prevListings.map(item => {
+        if (item._id === listingId) {
+          const updatedListing = data.listing;
+          const ratingCount = updatedListing.ratings?.length || 0;
+          const sum = updatedListing.ratings?.reduce((acc, r) => acc + r.rating, 0) || 0;
+          const averageRating = ratingCount > 0 ? (sum / ratingCount).toFixed(1) : null;
+          return {
+            ...item,
+            rating: averageRating ? parseFloat(averageRating) : null,
+            reviews: ratingCount
+          };
+        }
+        return item;
+      })
+    );
+
+    setToast({ message: 'Rating submitted successfully!', type: 'success', visible: true });
+    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
+  } catch (err) {
+    console.error(err);
+    setToast({ message: err.message || 'Failed to submit rating', type: 'error', visible: true });
+    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
+  }
 };
 
 
@@ -522,12 +730,22 @@ const handleRatingSubmit = (listingId, newRating) => {
             <span className="brand__icon">🍽️</span>
             <span className="brand__name">FreshillyMeal</span>
           </a>
+          <button 
+            className={`nav__toggle ${mobileMenuOpen ? 'active' : ''}`}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
           <nav className="nav__links">
             <a 
               href="#listings" 
               className="nav__link"
               onClick={(e) => {
                 e.preventDefault();
+                setMobileMenuOpen(false);
                 const listingsSection = document.getElementById('listings');
                 if (listingsSection) {
                   listingsSection.scrollIntoView({ behavior: 'smooth' });
@@ -536,9 +754,26 @@ const handleRatingSubmit = (listingId, newRating) => {
             >
               Browse Tiffins
             </a>
-            <a href="#" className="nav__link">Help</a>
-            <button className="icon-btn avatar" aria-label="User menu">👤</button>
-            <Link href="/auth" className="btn btn--dark">Register as Provider</Link>
+            <Link href="/help" className="nav__link" onClick={() => setMobileMenuOpen(false)}>Help</Link>
+            <Link href="/auth" className="btn btn--dark" onClick={() => setMobileMenuOpen(false)}>Register as Provider</Link>
+          </nav>
+          <nav className={`nav__mobile ${mobileMenuOpen ? 'active' : ''}`}>
+            <a 
+              href="#listings" 
+              className="nav__link"
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileMenuOpen(false);
+                const listingsSection = document.getElementById('listings');
+                if (listingsSection) {
+                  listingsSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+            >
+              Browse Tiffins
+            </a>
+            <Link href="/help" className="nav__link" onClick={() => setMobileMenuOpen(false)}>Help</Link>
+            <Link href="/auth" className="btn btn--dark" onClick={() => setMobileMenuOpen(false)}>Register as Provider</Link>
           </nav>
         </div>
       </header>
@@ -552,15 +787,27 @@ const handleRatingSubmit = (listingId, newRating) => {
           <p className="hero__subtitle">
             Discover delicious, home-cooked meals delivered right to your doorstep from local tiffin providers
           </p>
-          <form className="searchbar" onSubmit={(e) => e.preventDefault()}>
-            <input type="text" placeholder="Enter your location" aria-label="Location" />
-            <button className="icon-btn search-icon-btn" aria-label="Locate">
+          <form className="searchbar" onSubmit={(e) => {
+            e.preventDefault();
+            const locationInput = e.target.querySelector('input[type="text"]');
+            if (locationInput) {
+              setSearchLocation(locationInput.value.trim());
+            }
+          }}>
+            <input 
+              type="text" 
+              placeholder="Enter your location" 
+              aria-label="Location"
+              value={searchLocation}
+              onChange={(e) => setSearchLocation(e.target.value)}
+            />
+            <button className="icon-btn search-icon-btn" aria-label="Locate" type="button">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="m20 20-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
-            <button className="btn btn--primary">Find Tiffins</button>
+            <button className="btn btn--primary" type="submit">Find Tiffins</button>
           </form>
         </div>
       </section>
@@ -572,49 +819,102 @@ const handleRatingSubmit = (listingId, newRating) => {
             <span className="muted">Filter:</span>
 
             {/* ✅ Cuisine Dropdown */}
-            <div className={`dropdown ${openDropdown === 'cuisine' ? 'open' : ''}`}>
-              <button className="dropdown__btn" onClick={() => toggleDropdown('cuisine')}>
+            <div className="dropdown">
+              <button 
+                ref={cuisineButtonRef}
+                className="dropdown__btn" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleDropdown('cuisine');
+                }}
+              >
                 {selectedCuisine || "Cuisine Type ▾"}
               </button>
-              <div className="dropdown__menu">
-                <button onClick={() => setSelectedCuisine("North Indian")}>North Indian</button>
-                <button onClick={() => setSelectedCuisine("South Indian")}>South Indian</button>
-                <button onClick={() => setSelectedCuisine("Gujarati")}>Gujarati</button>
-                <button onClick={() => setSelectedCuisine("Bengali")}>Bengali</button>
-                <button onClick={() => setSelectedCuisine("Maharashtrian")}>Maharashtrian</button>
-                <button onClick={() => setSelectedCuisine("Jain")}>Jain</button>
-                <button onClick={() => setSelectedCuisine(null)}>Clear</button>
-              </div>
+              <DropdownMenu 
+                isOpen={openDropdown === 'cuisine'} 
+                onClose={closeDropdown}
+                buttonRef={cuisineButtonRef}
+                menuId="cuisine"
+              >
+                <button onClick={() => { setSelectedCuisine("North Indian"); closeDropdown(); }}>North Indian</button>
+                <button onClick={() => { setSelectedCuisine("South Indian"); closeDropdown(); }}>South Indian</button>
+                <button onClick={() => { setSelectedCuisine("Gujarati"); closeDropdown(); }}>Gujarati</button>
+                <button onClick={() => { setSelectedCuisine("Bengali"); closeDropdown(); }}>Bengali</button>
+                <button onClick={() => { setSelectedCuisine("Maharashtrian"); closeDropdown(); }}>Maharashtrian</button>
+                <button onClick={() => { setSelectedCuisine("Punjabi"); closeDropdown(); }}>Punjabi</button>
+                <button onClick={() => { setSelectedCuisine("Jain"); closeDropdown(); }}>Jain</button>
+                <button onClick={() => { setSelectedCuisine(null); closeDropdown(); }}>Clear</button>
+              </DropdownMenu>
             </div>
 
             {/* Delivery Dropdown */}
-            <div className={`dropdown ${openDropdown === 'delivery' ? 'open' : ''}`}>
-              <button className="dropdown__btn" onClick={() => toggleDropdown('delivery')}>
+            <div className="dropdown">
+              <button 
+                ref={deliveryButtonRef}
+                className="dropdown__btn" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleDropdown('delivery');
+                }}
+              >
                 {selectedMethod || "Delivery Method ▾"}
               </button>
-              <div className="dropdown__menu">
-                <button onClick={() => setSelectedMethod("Pickup")}>Pickup only</button>
-                <button onClick={() => setSelectedMethod("Delivery")}>Delivery only</button>
-                <button onClick={() => setSelectedMethod("Both")}>Both</button>
-                <button onClick={() => setSelectedMethod(null)}>Clear</button>
-              </div>
+              <DropdownMenu 
+                isOpen={openDropdown === 'delivery'} 
+                onClose={closeDropdown}
+                buttonRef={deliveryButtonRef}
+                menuId="delivery"
+              >
+                <button onClick={() => { setSelectedMethod("Pickup"); closeDropdown(); }}>Pickup only</button>
+                <button onClick={() => { setSelectedMethod("Delivery"); closeDropdown(); }}>Delivery only</button>
+                <button onClick={() => { setSelectedMethod("Both"); closeDropdown(); }}>Both</button>
+                <button onClick={() => { setSelectedMethod(null); closeDropdown(); }}>Clear</button>
+              </DropdownMenu>
             </div>
 
             {/* Price Dropdown */}
-            <div className={`dropdown ${openDropdown === 'price' ? 'open' : ''}`}>
-              <button className="dropdown__btn" onClick={() => toggleDropdown('price')}>Price Range ▾</button>
-              <div className="dropdown__menu price-menu">
-                <label><input type="radio" name="price" value="any" checked={selectedPrice === 'any'} onChange={() => setSelectedPrice('any')} /> Any</label>
-                <label><input type="radio" name="price" value="100-130" checked={selectedPrice === '100-130'} onChange={() => setSelectedPrice('100-130')} /> ₹100–₹130</label>
-                <label><input type="radio" name="price" value="130-150" checked={selectedPrice === '130-150'} onChange={() => setSelectedPrice('130-150')} /> ₹130–₹150</label>
-                <label><input type="radio" name="price" value="150+" checked={selectedPrice === '150+'} onChange={() => setSelectedPrice('150+')} /> ₹150+</label>
-              </div>
+            <div className="dropdown">
+              <button 
+                ref={priceButtonRef}
+                className="dropdown__btn" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleDropdown('price');
+                }}
+              >
+                Price Range ▾
+              </button>
+              <DropdownMenu 
+                isOpen={openDropdown === 'price'} 
+                onClose={closeDropdown}
+                buttonRef={priceButtonRef}
+                menuId="price"
+              >
+                <label className="price-menu"><input type="radio" name="price" value="any" checked={selectedPrice === 'any'} onChange={() => { setSelectedPrice('any'); closeDropdown(); }} /> Any</label>
+                <label className="price-menu"><input type="radio" name="price" value="100-130" checked={selectedPrice === '100-130'} onChange={() => { setSelectedPrice('100-130'); closeDropdown(); }} /> CAD $100–$130</label>
+                <label className="price-menu"><input type="radio" name="price" value="130-150" checked={selectedPrice === '130-150'} onChange={() => { setSelectedPrice('130-150'); closeDropdown(); }} /> CAD $130–$150</label>
+                <label className="price-menu"><input type="radio" name="price" value="150+" checked={selectedPrice === '150+'} onChange={() => { setSelectedPrice('150+'); closeDropdown(); }} /> CAD $150+</label>
+              </DropdownMenu>
             </div>
 
             {/* Availability Dropdown */}
-            <div className={`dropdown ${openDropdown === 'availability' ? 'open' : ''}`}>
-              <button className="dropdown__btn" onClick={() => toggleDropdown('availability')}>Availability ▾</button>
-              <div className="dropdown__menu">
+            <div className="dropdown">
+              <button 
+                ref={availabilityButtonRef}
+                className="dropdown__btn" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleDropdown('availability');
+                }}
+              >
+                Availability ▾
+              </button>
+              <DropdownMenu 
+                isOpen={openDropdown === 'availability'} 
+                onClose={closeDropdown}
+                buttonRef={availabilityButtonRef}
+                menuId="availability"
+              >
                 <label>
                   <input type="checkbox" checked={selectedDays.includes('Mon–Fri')} onChange={() => toggleDay('Mon–Fri')} /> Mon–Fri
                 </label>
@@ -624,24 +924,37 @@ const handleRatingSubmit = (listingId, newRating) => {
                 <label>
                   <input type="checkbox" checked={selectedDays.includes('Sun')} onChange={() => toggleDay('Sun')} /> Sun
                 </label>
-              </div>
+              </DropdownMenu>
             </div>
           </div>
 
           {/* Sort */}
           <div className="filters__right">
             <span className="muted">Sort by:</span>
-            <div className={`dropdown ${openDropdown === 'sort' ? 'open' : ''}`}>
-              <button className="dropdown__btn" onClick={() => toggleDropdown('sort')}>
+            <div className="dropdown">
+              <button 
+                ref={sortButtonRef}
+                className="dropdown__btn" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleDropdown('sort');
+                }}
+              >
                 {selectedSort === "popularity" ? "Popularity" : 
                  selectedSort === "priceLow" ? "Price (low to high)" : 
                  selectedSort === "priceHigh" ? "Price (high to low)" : "Sort"} ▾
               </button>
-              <div className="dropdown__menu">
-                <button onClick={() => setSelectedSort("popularity")}>Rating</button>
-                <button onClick={() => setSelectedSort("priceLow")}>Price (low to high)</button>
-                <button onClick={() => setSelectedSort("priceHigh")}>Price (high to low)</button>
-              </div>
+              <DropdownMenu 
+                isOpen={openDropdown === 'sort'} 
+                onClose={closeDropdown}
+                buttonRef={sortButtonRef}
+                align="right"
+                menuId="sort"
+              >
+                <button onClick={() => { setSelectedSort("popularity"); closeDropdown(); }}>Rating</button>
+                <button onClick={() => { setSelectedSort("priceLow"); closeDropdown(); }}>Price (low to high)</button>
+                <button onClick={() => { setSelectedSort("priceHigh"); closeDropdown(); }}>Price (high to low)</button>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -690,10 +1003,17 @@ const handleRatingSubmit = (listingId, newRating) => {
   <div className="card__body">
     <h3 className="card__title">{item.title}</h3>
     <p className="muted small">{item.cuisine || item.tagline || "North Indian Meals"}</p>
+    {item.location && (
+      <p className="muted small" style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        📍 {item.location}
+      </p>
+    )}
 
-    <div className="rating">
-  <span>★ {Number(item.rating ?? 2.5).toFixed(1)}</span>
-</div>
+    {item.rating !== null && item.rating !== undefined && (
+      <div className="rating">
+        <span>★ {Number(item.rating).toFixed(1)}</span>
+      </div>
+    )}
 
 
     <div className="subhead">Today's Menu</div>
@@ -783,27 +1103,28 @@ const handleRatingSubmit = (listingId, newRating) => {
           <div>
             <h5 className="footer__subtitle">Quick Links</h5>
             <ul className="linklist">
-              <li><a href="#">Home</a></li>
-              <li><a href="#">Browse Tiffins</a></li>
-              <li><a href="#">How It Works</a></li>
+              <li><Link href="/">Home</Link></li>
+              <li><Link href="/#listings">Browse Tiffins</Link></li>
               <li><Link href="/auth" className="btn btn--dark">Become a Provider</Link></li>
-              <li><a href="#">About Us</a></li>
+              <li><Link href="/about">About Us</Link></li>
             </ul>
           </div>
           <div>
             <h5 className="footer__subtitle">Support</h5>
             <ul className="linklist">
-              <li><a href="#">Help Center</a></li>
-              <li><a href="#">Safety Center</a></li>
-              <li><a href="#">Community Guidelines</a></li>
-              <li><a href="#">Terms of Service</a></li>
-              <li><a href="#">Privacy Policy</a></li>
+              <li><Link href="/help">Help Center</Link></li>
+              <li><Link href="/terms">Terms of Service</Link></li>
+              <li><Link href="/privacy">Privacy Policy</Link></li>
             </ul>
           </div>
           <div>
             <h5 className="footer__subtitle">Contact Us</h5>
             <ul className="contactlist">
-              <li style={{ color: '#4a5568' }}>tiffianhub@gmail.com</li>
+              <li>
+                <a href="mailto:tiffianhub@gmail.com" style={{ color: '#4a5568' }}>
+                  tiffianhub@gmail.com
+                </a>
+              </li>
             </ul>
           </div>
         </div>

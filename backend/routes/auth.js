@@ -4,6 +4,8 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs'); // ✅ missing import
 const User = require('../models/User');
+const Listing = require('../models/Listing');
+const Notification = require('../models/Notification');
 require('dotenv').config();
 
 const router = express.Router();
@@ -149,14 +151,160 @@ const protect = (req, res, next) => {
 // GET /api/auth/me
 router.get('/me', protect, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json({ user });
+    // Get user with password field to check if it exists
+    const userWithPassword = await User.findById(req.userId);
+    if (!userWithPassword) return res.status(404).json({ message: 'User not found' });
+    
+    // Convert to object and remove password from response (but check if it exists first)
+    const userObj = userWithPassword.toObject();
+    const hasPassword = !!(userWithPassword.password && userWithPassword.password.trim() !== '');
+    delete userObj.password; // Remove password from response
+    userObj.hasPassword = hasPassword;
+    
+    console.log('User hasPassword:', hasPassword, 'for user:', req.userId);
+    
+    res.json({ user: userObj });
   } catch (err) {
+    console.error('Error in /me:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
+// PUT /api/auth/profile - Update user profile (kitchen name, avatar, etc.)
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const { name, avatar } = req.body;
+    
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update name if provided
+    if (name !== undefined) {
+      if (!name || name.trim().length === 0) {
+        return res.status(400).json({ message: 'Kitchen name is required' });
+      }
+      user.name = name.trim();
+    }
+
+    // Update avatar if provided
+    if (avatar !== undefined) {
+      user.avatar = avatar; // Base64 string or URL
+    }
+
+    await user.save();
+
+    res.json({ 
+      message: 'Profile updated successfully',
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar
+      }
+    });
+  } catch (err) {
+    console.error('Error updating profile:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PUT /api/auth/change-password - Change password (for users with existing password)
+router.put('/change-password', protect, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user has a password set
+    if (!user.password) {
+      return res.status(400).json({ message: 'You do not have a password set. Please set a password first.' });
+    }
+
+    // Verify current password
+    const isMatch = await user.matchPassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    // Update password (pre-save hook will hash it)
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (err) {
+    console.error('Error changing password:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PUT /api/auth/set-password - Set password for Google users (or users without password)
+router.put('/set-password', protect, async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    
+    if (!newPassword) {
+      return res.status(400).json({ message: 'New password is required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user already has a password
+    if (user.password) {
+      return res.status(400).json({ message: 'You already have a password set. Use change password instead.' });
+    }
+
+    // Set password (pre-save hook will hash it)
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: 'Password set successfully' });
+  } catch (err) {
+    console.error('Error setting password:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// DELETE /api/auth/account - Delete user account and all associated data
+router.delete('/account', protect, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // Delete all listings associated with this user
+    await Listing.deleteMany({ user: userId });
+
+    // Delete all notifications associated with this user (as provider)
+    await Notification.deleteMany({ provider: userId });
+
+    // Delete the user account
+    await User.findByIdAndDelete(userId);
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting account:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // Redirect to Google for login
 router.get(

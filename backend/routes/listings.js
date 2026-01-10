@@ -130,7 +130,21 @@ router.get('/', async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    res.json({ listings, total, page, totalPages: Math.ceil(total / limit) });
+    // Calculate average rating for each listing
+    const listingsWithRating = listings.map(listing => {
+      const listingObj = listing.toObject();
+      if (listing.ratings && listing.ratings.length > 0) {
+        const sum = listing.ratings.reduce((acc, r) => acc + r.rating, 0);
+        listingObj.averageRating = (sum / listing.ratings.length).toFixed(1);
+        listingObj.ratingCount = listing.ratings.length;
+      } else {
+        listingObj.averageRating = null;
+        listingObj.ratingCount = 0;
+      }
+      return listingObj;
+    });
+
+    res.json({ listings: listingsWithRating, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -141,7 +155,22 @@ router.get('/', async (req, res) => {
 router.get('/my', protect, async (req, res) => {
   try {
     const listings = await Listing.find({ user: req.user._id });
-    res.json({ listings });
+    
+    // Calculate average rating for each listing
+    const listingsWithRating = listings.map(listing => {
+      const listingObj = listing.toObject();
+      if (listing.ratings && listing.ratings.length > 0) {
+        const sum = listing.ratings.reduce((acc, r) => acc + r.rating, 0);
+        listingObj.averageRating = (sum / listing.ratings.length).toFixed(1);
+        listingObj.ratingCount = listing.ratings.length;
+      } else {
+        listingObj.averageRating = null;
+        listingObj.ratingCount = 0;
+      }
+      return listingObj;
+    });
+    
+    res.json({ listings: listingsWithRating });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -151,7 +180,7 @@ router.get('/my', protect, async (req, res) => {
 // CREATE listing (Base64 images)
 router.post('/', protect, async (req, res) => {
   try {
-    const { title, details, price, unit, days, method, cuisine, offdays, images } = req.body;
+    const { title, details, price, unit, days, method, cuisine, offdays, location, images } = req.body;
 
     if (!title || !price || !unit) {
       return res.status(400).json({ message: 'Title, price, and unit are required.' });
@@ -166,6 +195,7 @@ router.post('/', protect, async (req, res) => {
       method,
       cuisine,
       offdays,
+      location,
       images: images || [], // Base64 strings
       user: req.user._id,
     });
@@ -204,6 +234,45 @@ router.delete('/:id', protect, async (req, res) => {
 
     await listing.deleteOne();
     res.json({ message: 'Listing removed' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST rating for a listing
+router.post('/:id/rating', protect, async (req, res) => {
+  try {
+    const { rating } = req.body;
+    if (!rating || rating < 0 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 0 and 5' });
+    }
+
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) {
+      return res.status(404).json({ message: 'Listing not found' });
+    }
+
+    // Check if user already rated this listing
+    const existingRatingIndex = listing.ratings.findIndex(
+      r => r.user.toString() === req.user._id.toString()
+    );
+
+    if (existingRatingIndex !== -1) {
+      // Update existing rating
+      listing.ratings[existingRatingIndex].rating = rating;
+      listing.ratings[existingRatingIndex].createdAt = new Date();
+    } else {
+      // Add new rating
+      listing.ratings.push({
+        user: req.user._id,
+        rating: rating,
+        createdAt: new Date()
+      });
+    }
+
+    await listing.save();
+    res.json({ message: 'Rating submitted successfully', listing });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

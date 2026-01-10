@@ -321,7 +321,20 @@ select:focus { border-color: var(--border); box-shadow: 0 0 0 4px var(--ring); }
 
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 @media (max-width: 1000px){ .grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px){ .grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px){ 
+  .grid { grid-template-columns: 1fr; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar .search { min-width: 100%; }
+  .toolbar select { width: 100%; max-width: 100%; }
+  .toolbar button { width: 100%; }
+  .navbar { flex-wrap: wrap; padding: 10px; }
+  .userbox { flex-wrap: wrap; gap: 8px; }
+  .userbox .row { flex-wrap: wrap; }
+  .userbox .small { font-size: 12px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card-actions { flex-direction: column; gap: 8px; }
+  .card-actions .row { justify-content: space-between; width: 100%; }
+  .meta-row { flex-direction: column; gap: 0.5rem; }
+}
 
 .card-listing { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
 .card-header { display: flex; justify-content: space-between; align-items: start; }

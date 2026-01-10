@@ -47,7 +47,7 @@ function render(){
     const head = mk('div','card-header');
     const left = mk('div');
     left.appendChild(mk('div','card-title',x.title));
-    const price = mk('div','card-price',`₹${x.price} `);
+    const price = mk('div','card-price',`CAD $${x.price} `);
     const per = mk('span','meta',` ${x.unit}`);
     price.appendChild(per);
     left.appendChild(price);

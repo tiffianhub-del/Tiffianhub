@@ -153,18 +153,48 @@ export default function AuthPage() {
             </form>
 
             {/* Google Sign-In Button */}
-            <div style={{ textAlign: 'center', marginTop: 16 }}>
-<a href={`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`}>
-  <button type="button" className="btn-google-full">
-    <img
-      src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg"
-      alt="Google"
-      className="google-logo-full"
-    />
-    Continue with Google
-  </button>
-</a>
-
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              marginTop: 16,
+              width: '100%'
+            }}>
+              <a 
+                href={`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`}
+                style={{ 
+                  textDecoration: 'none',
+                  display: 'inline-block',
+                  transition: 'transform 0.2s ease, opacity 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                <img
+                  src="/web_dark_rd_ctn@1x.png"
+                  alt="Continue with Google"
+                  style={{
+                    cursor: 'pointer',
+                    display: 'block',
+                    maxWidth: '100%',
+                    height: 'auto',
+                    margin: '0 auto',
+                    transition: 'filter 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.filter = 'brightness(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.filter = 'brightness(1)';
+                  }}
+                />
+              </a>
             </div>
           </>
         )}
@@ -212,16 +242,51 @@ export default function AuthPage() {
             <div className="space"></div>
 
             <button className="btn btn-primary" type="submit">Create account</button>
-             <a href={`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`}>
-  <button type="button" className="btn-google-full">
-    <img
-      src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg"
-      alt="Google"
-      className="google-logo-full"
-    />
-    Continue with Google
-  </button>
-</a>
+            
+            {/* Google Sign-Up Button */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              marginTop: 16,
+              width: '100%'
+            }}>
+              <a 
+                href={`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`}
+                style={{ 
+                  textDecoration: 'none',
+                  display: 'inline-block',
+                  transition: 'transform 0.2s ease, opacity 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                <img
+                  src="/web_dark_rd_ctn@1x.png"
+                  alt="Continue with Google"
+                  style={{
+                    cursor: 'pointer',
+                    display: 'block',
+                    maxWidth: '100%',
+                    height: 'auto',
+                    margin: '0 auto',
+                    transition: 'filter 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.filter = 'brightness(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.filter = 'brightness(1)';
+                  }}
+                />
+              </a>
+            </div>
 
           </form>
         )}
