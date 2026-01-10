@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const dynamicParams = true;
 
 export default function ListPage() {
   const [mounted, setMounted] = useState(false);
