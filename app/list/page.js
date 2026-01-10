@@ -1,14 +1,13 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 export const dynamicParams = true;
 
-export default function ListPage() {
+function ListPageContent() {
   const [mounted, setMounted] = useState(false);
   const [images, setImages] = useState([]);
   const [token, setToken] = useState(null);
@@ -380,5 +379,27 @@ const handleFiles = (files) => {
         </form>
       </section>
     </div>
+  );
+}
+
+export default function ListPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        background: '#0b0d10',
+        color: '#f9fafb'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2>Loading...</h2>
+          <p style={{ color: '#a5b4fc', marginTop: '1rem' }}>Please wait a moment.</p>
+        </div>
+      </div>
+    }>
+      <ListPageContent />
+    </Suspense>
   );
 }
