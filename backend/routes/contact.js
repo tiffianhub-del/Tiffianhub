@@ -30,8 +30,24 @@ router.post('/:id', async (req, res) => {
       });
     }
     
+    // Determine the "from" email address
+    // Resend only allows verified domains or their default onboarding@resend.dev
+    // Gmail.com and other public email domains cannot be verified
+    let fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    
+    // Check if the configured email uses an unverifiable domain (gmail.com, yahoo.com, etc.)
+    const unverifiableDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com'];
+    const emailDomain = fromEmail.split('@')[1]?.toLowerCase();
+    
+    if (emailDomain && unverifiableDomains.includes(emailDomain)) {
+      console.warn(`⚠️  RESEND_FROM_EMAIL (${fromEmail}) uses an unverifiable domain (${emailDomain})`);
+      console.warn('   Falling back to onboarding@resend.dev');
+      console.warn('   To use a custom domain, verify it at https://resend.com/domains');
+      fromEmail = 'onboarding@resend.dev';
+    }
+    
     console.log('📧 Attempting to send email via Resend...');
-    console.log('   From:', process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev');
+    console.log('   From:', fromEmail);
     console.log('   To:', providerEmail);
 
     // Use Resend API instead of SMTP (works on Render free tier)
@@ -42,7 +58,7 @@ router.post('/:id', async (req, res) => {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+        from: fromEmail,
         to: providerEmail,
         reply_to: email,
         subject: `New message about your listing: ${listing.title}`,
@@ -67,6 +83,69 @@ router.post('/:id', async (req, res) => {
     if (!resendResponse.ok) {
       const errorData = await resendResponse.json().catch(() => ({}));
       console.error('Resend API error:', errorData);
+      
+      // Check for domain verification errors
+      const errorMessage = errorData.message || '';
+      if (errorMessage.includes('domain is not verified') || errorMessage.includes('not verified')) {
+        console.error('❌ Domain verification error detected');
+        console.error('   The configured RESEND_FROM_EMAIL uses an unverified domain');
+        console.error('   Solution: Remove RESEND_FROM_EMAIL from environment variables');
+        console.error('   Or verify your domain at https://resend.com/domains');
+        console.error('   The system will automatically use onboarding@resend.dev');
+        
+        // Try again with onboarding@resend.dev if a different email was used
+        if (fromEmail !== 'onboarding@resend.dev') {
+          console.log('🔄 Retrying with onboarding@resend.dev...');
+          const retryResponse = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+            },
+            body: JSON.stringify({
+              from: 'onboarding@resend.dev',
+              to: providerEmail,
+              reply_to: email,
+              subject: `New message about your listing: ${listing.title}`,
+              text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #333;">New Message About Your Listing</h2>
+                  <p><strong>Listing:</strong> ${listing.title}</p>
+                  <hr style="border: 1px solid #eee; margin: 20px 0;">
+                  <p><strong>From:</strong> ${name} (${email})</p>
+                  <p><strong>Message:</strong></p>
+                  <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                    <p style="margin: 0; white-space: pre-wrap;">${message}</p>
+                  </div>
+                  <hr style="border: 1px solid #eee; margin: 20px 0;">
+                  <p style="color: #666; font-size: 12px;">You can reply directly to this email to respond to ${name}.</p>
+                </div>
+              `,
+            }),
+          });
+          
+          if (retryResponse.ok) {
+            const retryData = await retryResponse.json();
+            console.log('✅ Email sent successfully via Resend (using fallback):', retryData.id);
+            // Create notification for provider
+            await Notification.create({
+              provider: providerId,
+              listing: id,
+              fromName: name,
+              fromEmail: email,
+              message: message,
+              read: false,
+            });
+            return res.json({ success: true, message: 'Message sent successfully!' });
+          } else {
+            // If retry also failed, log the error
+            const retryErrorData = await retryResponse.json().catch(() => ({}));
+            console.error('Retry also failed:', retryErrorData);
+          }
+        }
+      }
+      
       throw new Error(errorData.message || `Resend API error: ${resendResponse.status}`);
     }
 

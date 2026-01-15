@@ -22,6 +22,11 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false  # Will be your frontend URL
+      - key: RESEND_API_KEY
+        sync: false  # Resend API key for email sending
+      - key: RESEND_FROM_EMAIL
+        sync: false  # Optional: Use verified domain email (e.g., noreply@yourdomain.com)
+                     # If not set or uses unverifiable domain (gmail.com, etc.), defaults to onboarding@resend.dev
 
   # Frontend Service
   - type: web
