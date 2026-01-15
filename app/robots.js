@@ -1,6 +1,4 @@
-import { MetadataRoute } from 'next';
-
-export default function robots(): MetadataRoute.Robots {
+export default function robots() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://freshillymeal.com';
   
   return {

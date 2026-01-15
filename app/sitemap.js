@@ -1,16 +1,11 @@
-import { MetadataRoute } from 'next';
-
-export const dynamic = 'force-static';
-export const revalidate = false;
-
-export default function sitemap(): MetadataRoute.Sitemap {
+export default function sitemap() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://freshillymeal.com';
   
   // Ensure baseUrl doesn't have trailing slash
   const cleanBaseUrl = baseUrl.replace(/\/$/, '');
   
   // Static pages
-  const routes: MetadataRoute.Sitemap = [
+  const routes = [
     {
       url: cleanBaseUrl,
       lastModified: new Date(),
