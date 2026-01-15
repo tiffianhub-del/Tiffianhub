@@ -84,8 +84,27 @@ router.post('/:id', async (req, res) => {
       const errorData = await resendResponse.json().catch(() => ({}));
       console.error('Resend API error:', errorData);
       
-      // Check for domain verification errors
       const errorMessage = errorData.message || '';
+      
+      // Check for testing email restriction (onboarding@resend.dev can only send to account owner)
+      if (errorMessage.includes('can only send testing emails') || 
+          errorMessage.includes('verify a domain') ||
+          (errorMessage.includes('testing emails') && errorMessage.includes('your own email address'))) {
+        console.error('❌ Testing email restriction detected');
+        console.error('   Using onboarding@resend.dev limits emails to your account email only');
+        console.error('   To send to other recipients, you must:');
+        console.error('   1. Verify a domain at https://resend.com/domains');
+        console.error('   2. Set RESEND_FROM_EMAIL to an email using that verified domain');
+        console.error('   Example: RESEND_FROM_EMAIL=noreply@yourdomain.com');
+        
+        return res.status(500).json({ 
+          error: 'Email service is in testing mode. To send emails to other recipients, please verify a domain at https://resend.com/domains and update the RESEND_FROM_EMAIL environment variable to use your verified domain.',
+          requiresDomainVerification: true,
+          resendDomainsUrl: 'https://resend.com/domains'
+        });
+      }
+      
+      // Check for domain verification errors
       if (errorMessage.includes('domain is not verified') || errorMessage.includes('not verified')) {
         console.error('❌ Domain verification error detected');
         console.error('   The configured RESEND_FROM_EMAIL uses an unverified domain');
