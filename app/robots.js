@@ -13,7 +13,7 @@ export default function robots() {
           '/auth/',
           '/dashboard/',
           '/list/',
-          '/api/',
+          
         ],
       },
     ],
