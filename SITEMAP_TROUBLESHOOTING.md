@@ -10,12 +10,17 @@ This error means Google cannot access your sitemap at the URL you provided.
 - Googlebot fetches `/sitemap.xml`
 - The sitemap is generated dynamically (API route or server-side)
 - Multiple fast requests come from Google IPs
+- **Googlebot uses HEAD requests first** (browsers use GET)
 - Namecheap then returns a 403/503 briefly, which Google reports as "Sitemap could not be read – General HTTP error"
+
+**Root Cause:** Google Search Console uses **HEAD requests** to check sitemaps before fetching with GET. If HEAD requests fail or are blocked, Google reports "General HTTP error" even though the sitemap file is correct.
 
 **Solution Implemented:** 
 - ✅ Sitemap is now **pre-generated at build time** as a static file (`public/sitemap.xml`)
 - ✅ Route handler (`app/sitemap.xml/route.js`) serves the static file with aggressive caching headers
+- ✅ **HEAD method handler added** - Googlebot's HEAD requests now work correctly
 - ✅ Special caching for Googlebot (24 hours) to reduce server load
+- ✅ `.htaccess` file created to allow HEAD requests at Apache level
 - ✅ No server-side processing = No ModSecurity triggers
 
 The sitemap is automatically generated before each build via the `prebuild` script.
@@ -82,8 +87,18 @@ If it works locally but not in production, it's a deployment issue.
 **Solution:**
 - ✅ **FIXED**: Sitemap is now pre-generated at build time (no server-side processing)
 - ✅ Route handler serves static file with proper caching headers
+- ✅ **HEAD method handler added** - Googlebot's HEAD requests now work correctly
+- ✅ `.htaccess` file allows HEAD requests at Apache level
 - ✅ Googlebot gets 24-hour cache to reduce request frequency
 - If issues persist, contact Namecheap support to whitelist Googlebot IPs
+
+### Issue 7: "General HTTP error" - HEAD Request Failure
+**Root Cause:** Googlebot uses HEAD requests first, then GET. If HEAD fails, Search Console shows "General HTTP error" even if GET works.
+
+**Solution:**
+- ✅ **FIXED**: Added `HEAD` method handler to `app/sitemap.xml/route.js`
+- ✅ `.htaccess` file ensures HEAD requests are allowed
+- ✅ Test with: `curl -I https://freshillymeal.com/sitemap.xml` (should return 200 OK)
 
 ## Verification Steps:
 

@@ -97,27 +97,49 @@ ${routes
   }
 }
 
+function getCacheHeaders(userAgent) {
+  const isGooglebot = userAgent?.includes('Googlebot') || 
+                      userAgent?.includes('Google-InspectionTool');
+
+  // Aggressive caching for Googlebot to reduce server load and ModSecurity triggers
+  const cacheControl = isGooglebot
+    ? 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800' // 24 hours for Googlebot
+    : 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400'; // 1 hour for others
+
+  return {
+    'Content-Type': 'application/xml',
+    'Cache-Control': cacheControl,
+    'X-Content-Type-Options': 'nosniff',
+  };
+}
+
+// Handle HEAD requests (Googlebot uses this first!)
+export async function HEAD(request) {
+  try {
+    const userAgent = request.headers.get('user-agent') || '';
+    const headers = getCacheHeaders(userAgent);
+    
+    // For HEAD, we don't need the body, just the headers
+    return new NextResponse(null, {
+      status: 200,
+      headers,
+    });
+  } catch (error) {
+    console.error('Error handling HEAD request:', error);
+    return new NextResponse(null, { status: 404 });
+  }
+}
+
+// Handle GET requests
 export async function GET(request) {
   try {
     const sitemapContent = await getSitemapContent();
-
-    // Detect Googlebot for better caching
     const userAgent = request.headers.get('user-agent') || '';
-    const isGooglebot = userAgent.includes('Googlebot') || 
-                        userAgent.includes('Google-InspectionTool');
-
-    // Aggressive caching for Googlebot to reduce server load and ModSecurity triggers
-    const cacheControl = isGooglebot
-      ? 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800' // 24 hours for Googlebot
-      : 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400'; // 1 hour for others
+    const headers = getCacheHeaders(userAgent);
 
     return new NextResponse(sitemapContent, {
       status: 200,
-      headers: {
-        'Content-Type': 'application/xml',
-        'Cache-Control': cacheControl,
-        'X-Content-Type-Options': 'nosniff',
-      },
+      headers,
     });
   } catch (error) {
     console.error('Error reading sitemap:', error);
