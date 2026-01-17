@@ -9,12 +9,7 @@ export default function robots() {
           '/',
           '/sitemap.xml',  // Explicitly allow sitemap for Googlebot
         ],
-        disallow: [
-          '/auth/',
-          '/dashboard/',
-          '/list/',
-          
-        ],
+     
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
