@@ -15,10 +15,11 @@ async function getSitemapContent() {
     return cachedSitemap;
   }
 
-  const filePath = path.join(process.cwd(), 'public', 'sitemap.xml');
-  
-  // Check if file exists
-  if (!fs.existsSync(filePath)) {
+  try {
+    const filePath = path.join(process.cwd(), 'public', 'sitemap.xml');
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
       console.warn('Sitemap file not found, generating fallback...');
       // Fallback: generate on-the-fly if file doesn't exist
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://freshillymeal.com';
