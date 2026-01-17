@@ -5,7 +5,10 @@ export default function robots() {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
+        allow: [
+          '/',
+          '/sitemap.xml',  // Explicitly allow sitemap for Googlebot
+        ],
         disallow: [
           '/auth/',
           '/dashboard/',
