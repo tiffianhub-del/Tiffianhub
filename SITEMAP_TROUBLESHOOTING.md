@@ -4,6 +4,22 @@
 
 This error means Google cannot access your sitemap at the URL you provided.
 
+## ⚠️ Namecheap ModSecurity / Rate-Limit Issue (FIXED)
+
+**Problem:** Namecheap hosting + Next.js apps often trigger ModSecurity/rate-limit rules when:
+- Googlebot fetches `/sitemap.xml`
+- The sitemap is generated dynamically (API route or server-side)
+- Multiple fast requests come from Google IPs
+- Namecheap then returns a 403/503 briefly, which Google reports as "Sitemap could not be read – General HTTP error"
+
+**Solution Implemented:** 
+- ✅ Sitemap is now **pre-generated at build time** as a static file (`public/sitemap.xml`)
+- ✅ Route handler (`app/sitemap.xml/route.js`) serves the static file with aggressive caching headers
+- ✅ Special caching for Googlebot (24 hours) to reduce server load
+- ✅ No server-side processing = No ModSecurity triggers
+
+The sitemap is automatically generated before each build via the `prebuild` script.
+
 ## Quick Checks:
 
 ### 1. **Verify the Sitemap is Accessible**
@@ -57,9 +73,17 @@ If it works locally but not in production, it's a deployment issue.
 
 ### Issue 5: Route Not Generated
 **Solution:**
-- The sitemap.js file must be in the `app/` directory
-- File must be named exactly `sitemap.js` (not `sitemap.ts` or `sitemap.jsx`)
-- Must export a default function
+- The sitemap is now generated statically at build time
+- Check that `scripts/generate-sitemap.js` exists and runs during `prebuild`
+- Verify `app/sitemap.xml/route.js` exists to serve the static file
+- The old `app/sitemap.js` is kept as a fallback but the route handler takes precedence
+
+### Issue 6: ModSecurity / Rate-Limit Errors (Namecheap)
+**Solution:**
+- ✅ **FIXED**: Sitemap is now pre-generated at build time (no server-side processing)
+- ✅ Route handler serves static file with proper caching headers
+- ✅ Googlebot gets 24-hour cache to reduce request frequency
+- If issues persist, contact Namecheap support to whitelist Googlebot IPs
 
 ## Verification Steps:
 
