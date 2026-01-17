@@ -2,12 +2,23 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-export async function GET(request) {
-  try {
-    const filePath = path.join(process.cwd(), 'public', 'sitemap.xml');
-    
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
+// Cache the sitemap content in memory to avoid file I/O on every request
+let cachedSitemap = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 3600000; // 1 hour in milliseconds
+
+async function getSitemapContent() {
+  const now = Date.now();
+  
+  // Return cached content if still valid
+  if (cachedSitemap && (now - cacheTimestamp) < CACHE_DURATION) {
+    return cachedSitemap;
+  }
+
+  const filePath = path.join(process.cwd(), 'public', 'sitemap.xml');
+  
+  // Check if file exists
+  if (!fs.existsSync(filePath)) {
       console.warn('Sitemap file not found, generating fallback...');
       // Fallback: generate on-the-fly if file doesn't exist
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://freshillymeal.com';
@@ -60,17 +71,34 @@ ${routes
   .join('\n')}
 </urlset>`;
 
-      return new NextResponse(sitemap, {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/xml',
-          'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
-          'X-Content-Type-Options': 'nosniff',
-        },
-      });
+      // Cache the fallback sitemap
+      cachedSitemap = sitemap;
+      cacheTimestamp = now;
+      
+      return sitemap;
     }
 
-    const fileContents = fs.readFileSync(filePath, 'utf8');
+    // Read file asynchronously to avoid blocking
+    const fileContents = await fs.promises.readFile(filePath, 'utf8');
+    
+    // Cache the file content
+    cachedSitemap = fileContents;
+    cacheTimestamp = now;
+    
+    return fileContents;
+  } catch (error) {
+    console.error('Error reading sitemap:', error);
+    // Return cached content if available, even if expired
+    if (cachedSitemap) {
+      return cachedSitemap;
+    }
+    throw error;
+  }
+}
+
+export async function GET(request) {
+  try {
+    const sitemapContent = await getSitemapContent();
 
     // Detect Googlebot for better caching
     const userAgent = request.headers.get('user-agent') || '';
@@ -82,7 +110,7 @@ ${routes
       ? 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800' // 24 hours for Googlebot
       : 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400'; // 1 hour for others
 
-    return new NextResponse(fileContents, {
+    return new NextResponse(sitemapContent, {
       status: 200,
       headers: {
         'Content-Type': 'application/xml',
